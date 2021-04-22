@@ -1,0 +1,13 @@
+name: cs424p3
+title: cs424p3
+username:
+account: ibtasar-cs424
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3988488
+bundleId: 4507208
+url: https://ibtasar-cs424.shinyapps.io/cs424p3/
+when: 1619130910.59292
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: Energy_Usage_2010_orgworking.csv
