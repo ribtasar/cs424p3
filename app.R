@@ -550,7 +550,8 @@ server <- function(input, output,session) {
       else if(input$input12=="Blocks with highest electricity")
       {
         d<- d %>% select(TRACTCE,TOTAL.KWH,geometry) %>% slice_max(TOTAL.KWH.AGE,prop=0.1) %>% mapview(zcol="TOTAL.KWH")
-        d
+        d 
+        
       }
       else if(input$input12=="Blocks with most gas used")
       {
