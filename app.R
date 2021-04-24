@@ -168,7 +168,7 @@ body<-dashboardBody(
                                 selectInput("input10", "Select the Month:", selections2, selected=1),
                                 selectInput("input11", "Select Building Type:", selections3, selected=1),
                                 #checkboxInput("check1", "Select for city of Chicago", value = FALSE, width = NULL),
-                                selectInput("input12", "Select Census Tract option to show:", selections5, selected=NULL)
+                                selectInput("input12", "Select CHICAGO above and then choose Census Tracts option:", selections5, selected=NULL)
                                 )
                              ),
               ),   
@@ -179,8 +179,8 @@ body<-dashboardBody(
                               fluidRow(
                                 tabBox(title = "Map 1", id="tabset2", selected = "Map", width = NULL,
                                        tabPanel("Map", mapviewOutput("map2", width = "100%", height = 400)), 
-                                       tabPanel("Graph"),
-                                       tabPanel("Table")
+                                       tabPanel("Graph",plotOutput("graph2", height = 300)),
+                                       tabPanel("Table", dataTableOutput("table2", height = 300))
                                 )#end of tabbox
                                 ),
                               ),
@@ -189,8 +189,8 @@ body<-dashboardBody(
                                 tabBox(title = "Map 2", id="tabset3", selected = "Map", width = NULL,
                                       
                                        tabPanel("Map", mapviewOutput("map3", width = "100%", height = 400)), 
-                                       tabPanel("Graph"),
-                                       tabPanel("Table")
+                                       tabPanel("Graph", plotOutput("graph3", height = 300)),
+                                       tabPanel("Table", dataTableOutput("table3", height = 300))
                                 )#end of tabbox
                                 ),
                               ),
@@ -527,12 +527,12 @@ server <- function(input, output,session) {
       }
       else if(input$input12=="Tallest buildings")
       {
-        d<- d %>% select(TRACTCE,AVERAGE.STORIES,geometry) %>% slice_max(AVERAGE.STORIES.AGE,prop=0.1) %>% mapview(zcol="AVERAGE.STORIES")
+        d<- d %>% select(TRACTCE,AVERAGE.STORIES,geometry) %>% slice_max(AVERAGE.STORIES,prop=0.1) %>% mapview(zcol="AVERAGE.STORIES")
         d
       }
       else if(input$input12=="Blocks with highest electricity")
       {
-        d<- d %>% select(TRACTCE,TOTAL.KWH,geometry) %>% slice_max(TOTAL.KWH.AGE,prop=0.1) %>% mapview(zcol="TOTAL.KWH")
+        d<- d %>% select(TRACTCE,TOTAL.KWH,geometry) %>% slice_max(TOTAL.KWH,prop=0.1) %>% mapview(zcol="TOTAL.KWH")
         d 
         
       }
@@ -541,7 +541,7 @@ server <- function(input, output,session) {
         d<- d %>% select(TRACTCE,TOTAL.THERMS,geometry) %>% slice_max(TOTAL.THERMS,prop=0.1) %>% mapview(zcol="TOTAL.THERMS")
         d
       }
-      else if(input$input12=="Highest population")
+      else if(input$input12=="Most population")
       {
         d<- d %>% select(TRACTCE,TOTAL.POPULATION,geometry) %>% slice_max(TOTAL.POPULATION,prop=0.1) %>% mapview(zcol="TOTAL.POPULATION")
         d
@@ -790,8 +790,7 @@ server <- function(input, output,session) {
    
     s= graphReactive()
     s
-   
-   
+
   })
   
   
@@ -819,10 +818,157 @@ server <- function(input, output,session) {
   })
   
   
+  graph2Reactive <- reactive({
+    
+    s<-option4Reactive()
+    
+    elec<-s[,12:23]
+    gas<-s[,25:36]
+    elec$geometry<-NULL
+    gas$geometry<-NULL
+    elec<-colSums(elec)
+    gas<-colSums(gas)
+    #create dataframe for graph and tables
+    data1<-data.frame(months1,elec,gas)
+    data1$months1<- as.factor(data1$months1)
+    data1$months1<- factor(data1$months1, levels=c("Jan","Feb","Mar","Apr","May","Jun","July","Aug","Sep","Oct","Nov","Dec"))
+    
+    if(input$input5=="Electricity")
+    {
+      
+      g<-ggplot(data=data1)+ 
+        geom_point(data=data1,aes(months1,elec))+ geom_path(data=data1,group=1,mapping = aes(x=months1,y=elec)) +
+        theme_bare
+      g
+      
+    }
+    else if(input$input5=="Gas")
+    {
+      
+      g<-ggplot(data=data1)+ 
+        geom_point(data=data1,aes(months1,gas))+ geom_path(data=data1,group=1,mapping = aes(x=months1,y=gas)) +
+        theme_bare
+      g
+    }
+    else{
+      g<-ggplot(data=data1)+ 
+        geom_point(data=data1,aes(months1,elec))+ geom_path(data=data1,group=1,mapping = aes(x=months1,y=elec)) +
+        theme_bare
+      g
+    }
+    
+  })
+  
+  
+  
+  
+  
+  output$graph2<-renderPlot({
+    
+    s= graph2Reactive()
+    s
+    
+  })
+  
+  
+  
+  output$table2<-DT::renderDataTable({
+    
+    s<-option4Reactive()
+    
+    elec<-s[,12:23]
+    gas<-s[,25:36]
+    
+    elec$geometry<-NULL
+    gas$geometry<-NULL
+    
+    elec<-colSums(elec)
+    gas<-colSums(gas)
+    #create dataframe for graph and tables
+    data1<-data.frame(months1,elec,gas)
+    
+    DT::datatable(data1, rownames=FALSE)
+  })
+  
+  
+  ####################
+  
   output$map3 <- renderLeaflet({
    
     optionmap3Reactive()@map
  
+  })
+  
+  
+  graph3Reactive <- reactive({
+    
+    s<-option8Reactive()
+    
+    elec<-s[,12:23]
+    gas<-s[,25:36]
+    elec$geometry<-NULL
+    gas$geometry<-NULL
+    elec<-colSums(elec)
+    gas<-colSums(gas)
+    #create dataframe for graph and tables
+    data1<-data.frame(months1,elec,gas)
+    data1$months1<- as.factor(data1$months1)
+    data1$months1<- factor(data1$months1, levels=c("Jan","Feb","Mar","Apr","May","Jun","July","Aug","Sep","Oct","Nov","Dec"))
+    
+    if(input$input9=="Electricity")
+    {
+      
+      g<-ggplot(data=data1)+ 
+        geom_point(data=data1,aes(months1,elec))+ geom_path(data=data1,group=1,mapping = aes(x=months1,y=elec)) +
+        theme_bare
+      g
+      
+    }
+    else if(input$input9=="Gas")
+    {
+      
+      g<-ggplot(data=data1)+ 
+        geom_point(data=data1,aes(months1,gas))+ geom_path(data=data1,group=1,mapping = aes(x=months1,y=gas)) +
+        theme_bare
+      g
+    }
+    else{
+      g<-ggplot(data=data1)+ 
+        geom_point(data=data1,aes(months1,elec))+ geom_path(data=data1,group=1,mapping = aes(x=months1,y=elec)) +
+        theme_bare
+      g
+    }
+    
+  })
+  
+  
+  
+  
+  
+  output$graph3<-renderPlot({
+    
+    s= graph3Reactive()
+    s
+    
+  })
+  
+  
+  
+  output$table3<-DT::renderDataTable({
+    
+    s<-option8Reactive()
+    
+    elec<-s[,12:23]
+    gas<-s[,25:36]
+    elec$geometry<-NULL
+    gas$geometry<-NULL
+    elec<-colSums(elec)
+    gas<-colSums(gas)
+    
+    #create dataframe for graph and tables
+    data1<-data.frame(months1,elec,gas)
+    
+    DT::datatable(data1, rownames=FALSE)
   })
 }
 
