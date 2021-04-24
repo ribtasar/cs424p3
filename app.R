@@ -47,7 +47,8 @@ d1$CENSUS.BLOCK<-as.character(d1$CENSUS.BLOCK)
 d1[2][is.na(d1[2])] <- "" 
 d1[, 5:40][is.na(d1[, 5:40])] <- 0
 colnames(d1)[1] <-"COMMUNITY.AREA.NAME"
-
+#remove summary lines 
+d1<-subset(d1, d1$CENSUS.BLOCK!="")
 #colSums(is.na(d1)) :to check the sume of NAs
 #glimpse to check the dataset
 
