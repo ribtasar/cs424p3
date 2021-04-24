@@ -13,7 +13,7 @@ library(shinydashboard,warn.conflicts = FALSE)
 library(ggplot2)
 # library(RColorBrewer)
 # library(dplyr)
-# library(DT)
+ library(DT)
 # library(gridExtra)
 # library(leaflet)
 # library(sf)
@@ -56,8 +56,26 @@ chicagoblks <- blocks(state = "IL", county = "Cook County")
 #subset to get only the blocks for Chicago that are in our data set
 
 chicagoblks <- subset(chicagoblks, chicagoblks$GEOID10 %in% d1$CENSUS.BLOCK)
+chicagoblks[,7:15]<-NULL #remove columns we don't need to make file smaller
 
+#load spatial data information for Tracts in Chicago
+chitracts<-tracts("IL","Cook County")
+chitracts<-subset(chitracts, chitracts$GEOID10 %in% d1$CENSUS.BLOCK)
+chitracts[5:12]<-NULL
 
+#dataframe for tracts data
+d2<-d1
+d2[5:16]<-NULL
+d2[6:17]<-NULL
+
+#loopdata<-subset(d1, d1$COMMUNITY.AREA.NAME=="Loop")
+
+#subset data for Near West Side
+nws<-subset(d1, d1$COMMUNITY.AREA.NAME=="Near West Side")
+#Merge spatial data with NWS data frame
+#merged_d1<-geo_join (chicagoblks,nws,'GEOID10','CENSUS.BLOCK',how="inner")
+
+merged_nws<-geo_join (chicagoblks,nws,'GEOID10','CENSUS.BLOCK',how="inner")
 
 #lists to use for UI inputs
 selections1<- c("Electricity","Gas","Building Age","Building Type","Building Height",
@@ -72,6 +90,7 @@ selections5<-c("oldest buildings","newest buildings","tallest buildings",
                "Blocks with highest electricity","Blocks with most has used",
                "Most population","Most occupied percentage","highest percentage of renters",
                "Greatest Housesize","Largest number of units")
+months1<-c("Jan","Feb","Mar","Apr","May","Jun","July","Aug","Sep","Oct","Nov","Dec")
               
 #===========
 #start of UI
@@ -110,8 +129,8 @@ body<-dashboardBody(
                 column(width=10, offset=1,
                     tabBox(title = "Near West Side Data", id="tabset1", selected = "Map", width = NULL,               
                       tabPanel("Map", mapviewOutput("map1", width = "100%", height = 400)), 
-                      tabPanel("Graph"),
-                      tabPanel("Table")
+                      tabPanel("Graph", plotOutput("graph1", height = 300)),
+                      tabPanel("Table",dataTableOutput("table1", height = 200))
                       )#end of tabbox
                         
                 )
@@ -126,7 +145,7 @@ body<-dashboardBody(
                               box(
                                 title = "Map1", status = "primary", width = 12,
                                 collapsible = TRUE, collapsed = TRUE,
-                                selectInput("input4", "Select Community Area:", selections4, selected=33),
+                                selectInput("input4", "Select Community Area:", selections4, selected="Near West Side"),
                                 selectInput("input5", "Select option:", selections1, selected=1),
                                 selectInput("input6", "Select the Month:", selections2, selected=1),
                                 selectInput("input7", "Select Building Type:", selections3, selected=1)
@@ -136,7 +155,7 @@ body<-dashboardBody(
                               box(
                                 title = "Map 2", status = "primary", width = 12,
                                 collapsible = TRUE, collapsed = TRUE, 
-                                selectInput("input8", "Select Community Area:", selections4, selected=38),
+                                selectInput("input8", "Select Community Area:", selections4, selected="Loop"),
                                 selectInput("input9", "Select option:", selections1, selected=1),
                                 selectInput("input10", "Select the Month:", selections2, selected=1),
                                 selectInput("input11", "Select Building Type:", selections3, selected=1),
@@ -183,13 +202,16 @@ body<-dashboardBody(
                 h4("Data Source:The original data is available from  
                 https://www.kaggle.com/chicago/chicago-energy-usage-2010
                   and also available at 
-                  https://data.cityofchicago.org/Environment-Sustainable-Development/Energy-Usage-2010/8yq3-m6wp"),
+                   https://data.cityofchicago.org/Environment-Sustainable-Development/Energy-Usage-2010/8yq3-m6wp"),
                 
                 h5("App developer: Rabia Ibtasar"),
                 
                 h5("What is this application for?"),
                 h5(" 
-                      This interactive application has been designed to allow visitors to
+                      This interactive application has been designed to allow visitors to understand the electricity and gas energy use 
+                      in the city of Chicago for 2010 at the block level in different communities and also at the Census tract level 
+                      for the entire city. Anyone interested in exploring how electricity and gas usage differs by different
+                      variables will find this application useful.
                       ")
                 
               )
@@ -199,7 +221,7 @@ body<-dashboardBody(
   
 # Create the shiny dashboard
 ui <- dashboardPage(skin = "purple",
-                    dashboardHeader(title = "CS 424 Project 3 Comparing Energy in Chicago"), sidebar, body
+                    dashboardHeader(title = "CS 424 Project 3 Comparing Electricity and Gas usage in Chicago"), sidebar, body
 )
 
 #========================
@@ -212,14 +234,25 @@ server <- function(input, output,session) {
   #NWS Tab reactives
   #setup for the first drop down 
   
-  #loopdata<-subset(d1, d1$COMMUNITY.AREA.NAME=="Loop")
-  
-  #subset data for Near West Side
-  nws<-subset(d1, d1$COMMUNITY.AREA.NAME=="Near West Side")
-  #Merge spatial data with NWS data frame
-  #merged_d1<-geo_join (chicagoblks,nws,'GEOID10','CENSUS.BLOCK',how="inner")
-  merged_nws<-geo_join (chicagoblks,nws,'GEOID10','CENSUS.BLOCK',how="inner")
-  
+  graphReactive <- reactive({
+    if(input$input1=="Electricity")
+    {
+      choice="elec"
+      choice      
+    }
+    else if(input$input1=="Gas")
+    {
+      
+      choice="gas"
+      choice
+    }
+    else{
+      choice="elec"
+      choice
+    }
+    
+  })
+
   option1Reactive <- reactive({
     
     f<-option2Reactive()
@@ -306,31 +339,7 @@ server <- function(input, output,session) {
   })
   
 
-  
-  # 
-  # #reactive for third dropdown
-  # option3Reactive<-reactive ({
-  #   if(input$input3=="Residential")
-  #   {
-  #    m<-subset(merged_nws,merged_nws$BUILDING.TYPE=='Residential')
-  #    m
-  #   }
-  #   else if(input$input3=="Commercial")
-  #   {
-  #     m <- subset(merged_nws,merged_nws$BUILDING.TYPE=='Commercial')
-  #     m
-  #   }
-  #   else if(input$input3=="Industrial")
-  #   {
-  #     m <- subset(merged_nws,merged_nws$BUILDING.TYPE=='Industrial')
-  #     m
-  #   }
-  #   else
-  #   {
-  #     m<-merged_nws
-  #     m
-  #   }
-  # })
+
   option2Reactive<-reactive({
 
     if(input$input1=="Electricity"){
@@ -361,6 +370,23 @@ server <- function(input, output,session) {
 
     }
   })
+  
+  # increase the default font size and create theme for blank backgrounds for plots and legends at the bottom
+  theme_set(theme_grey(base_size = 11)) 
+  theme_bare<- theme(panel.background=element_blank(),
+                     legend.direction = "horizontal", legend.position = "bottom")
+  
+  # output$graph1 <- renderPlot({
+  #   temp1<-option2Reactive()
+  #   
+  #   # ggplot(data=merged_nws)+ geom_line(mapping=aes(x=,y=temp1)+
+  #   #   ggtitle("Total Amount of each energy source per year from 1990-2019")+ylab("Energy Amount (MWh)")+ theme_bare+
+  #   #   scale_fill_manual(values=useColors)
+  # })
+  # 
+  # output$table1 <- DT::renderDataTable({
+  #   #DT::datatable(displayAmounts, rownames=FALSE)
+  # })
   
   #########################################
   #Reactives for TAB2
@@ -645,6 +671,47 @@ server <- function(input, output,session) {
   option1Reactive()@map
   })
   
+  
+  output$graph1<-renderPlot({
+   
+    elec<-merged_nws[,12:23]
+    gas<-merged_nws[,25:36]
+    elec$geometry<-NULL
+    gas$geometry<-NULL
+    elec<-colSums(elec)
+    gas<-colSums(gas)
+    #create dataframe for graph and tables
+    data1<-data.frame(months1,elec,gas)
+    #create datatable to output
+    
+    #call a reactive that just looks at first input to see if its elec or gas
+    #and then pass that onto to geom_point
+    
+    ggplot(data=data1,aes(x=months1,y=graphReactive()))+ 
+      geom_point(aes(months1,elec))+
+      scale_y_continuous(name=graphReactive())+
+      theme_bare
+  })
+  
+  
+  
+  output$table1<-DT::renderDataTable({
+    #new1<-subset(percentsData, percentsData$SOURCE==input$sourceA & percentsData$STATE==input$stateA & percentsData$YEAR==input$yearA )
+    #new1<-select(new1,YEAR,STATE,GENERATION,PERCENTS)
+    elec<-merged_nws[,12:23]
+    gas<-merged_nws[,25:36]
+    elec$geometry<-NULL
+    gas$geometry<-NULL
+    elec<-colSums(elec)
+    gas<-colSums(gas)
+    #create dataframe for graph and tables
+    data1<-data.frame(months1,elec,gas)
+    
+    DT::datatable(data1, rownames=FALSE)
+  })
+  
+  
+  #################
   #outputs for TAB2
   output$map2 <- renderLeaflet({
     optionmap2Reactive()@map
