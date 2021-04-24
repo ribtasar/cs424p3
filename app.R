@@ -1,6 +1,6 @@
 
 
-# Project 3 CS 424 Spring 2020 UIC - Rabia Ibtasar
+# Project 3 CS 424 Spring 2021 UIC - Rabia Ibtasar
 #To deploy 
 #library(rsconnect)
 #rsconnect::deployApp('path/to/your/app')
@@ -38,8 +38,8 @@ d1<-read.csv('Energy_Usage_2010.csv')
 #d1[18:19]<-NULL
 #d1[31:61]<-NULL
 
-#data cleanup to start analysis
-#change datatypes into correct types for data analysis
+#data cleanup 
+#change data types into correct types for data analysis
 
 d1$CENSUS.BLOCK<-as.character(d1$CENSUS.BLOCK)
 #take care of all the missing values in the data
@@ -58,17 +58,23 @@ chicagoblks <- blocks(state = "IL", county = "Cook County")
 chicagoblks <- subset(chicagoblks, chicagoblks$GEOID10 %in% d1$CENSUS.BLOCK)
 chicagoblks[,7:15]<-NULL #remove columns we don't need to make file smaller
 
+#d2 dataset is for City of Chicago
+d2<-d1
+d2<-geo_join(chicagoblks,d2,'GEOID10','CENSUS.BLOCK',how="inner")
+d2[,1:2]<-NULL
+d2[,4:6]<-NULL
+d2[,7:18]<-NULL
+d2[,8:19]<-NULL
+d2$geometry<-NULL
+
 #load spatial data information for Tracts in Chicago
 chitracts<-tracts("IL","Cook County")
-chitracts<-subset(chitracts, chitracts$GEOID10 %in% d1$CENSUS.BLOCK)
-chitracts[5:12]<-NULL
+chitracts[,1:2]<-NULL
+chitracts[,3:10]<-NULL
 
-#dataframe for tracts data
-d2<-d1
-d2[5:16]<-NULL
-d2[6:17]<-NULL
-
-#loopdata<-subset(d1, d1$COMMUNITY.AREA.NAME=="Loop")
+#merge dataframe d2 for tracts data
+d2<-geo_join(chitracts,d2,'TRACTCE','TRACTCE10',how="inner")
+d2<-d2 %>% group_by(TRACTCE)
 
 #subset data for Near West Side
 nws<-subset(d1, d1$COMMUNITY.AREA.NAME=="Near West Side")
@@ -86,10 +92,12 @@ selections2<-c("TOTAL","JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY",
 
 selections3<-c("All","Residential","Commercial","Industrial")
 selections4<-unique(d1$COMMUNITY.AREA.NAME)
-selections5<-c("oldest buildings","newest buildings","tallest buildings",
-               "Blocks with highest electricity","Blocks with most has used",
-               "Most population","Most occupied percentage","highest percentage of renters",
+selections4<-c(selections4, "Chicago")
+selections5<-c("Oldest buildings","Newest buildings","Tallest buildings",
+               "Blocks with highest electricity","Blocks with most gas used",
+               "Most population","Most occupied percentage","Highest percentage of renters",
                "Greatest Housesize","Largest number of units")
+
 months1<-c("Jan","Feb","Mar","Apr","May","Jun","July","Aug","Sep","Oct","Nov","Dec")
               
 #===========
@@ -519,9 +527,70 @@ server <- function(input, output,session) {
   ###### Map3 Reactives
   
   option8Reactive<-reactive({
+    
+    if(input$input8=="Chicago")
+    {
+      d<-d2
+      
+      if(input$input12=="Oldest buildings")
+      {
+        d<- d %>% select(TRACTCE,AVERAGE.BUILDING.AGE,geometry) %>% slice_max(AVERAGE.BUILDING.AGE,prop=0.1) %>% mapview(zcol="AVERAGE.BUILDING.AGE")
+        d
+      }
+      else if(input$input12=="Newest buildings")
+      {
+        d<- d %>% select(TRACTCE,AVERAGE.BUILDING.AGE,geometry) %>% slice_min(AVERAGE.BUILDING.AGE,prop=0.1) %>% mapview(zcol="AVERAGE.BUILDING.AGE")
+        d
+      }
+      else if(input$input12=="Tallest buildings")
+      {
+        d<- d %>% select(TRACTCE,AVERAGE.STORIES,geometry) %>% slice_max(AVERAGE.STORIES.AGE,prop=0.1) %>% mapview(zcol="AVERAGE.STORIES")
+        d
+      }
+      else if(input$input12=="Blocks with highest electricity")
+      {
+        d<- d %>% select(TRACTCE,TOTAL.KWH,geometry) %>% slice_max(TOTAL.KWH.AGE,prop=0.1) %>% mapview(zcol="TOTAL.KWH")
+        d
+      }
+      else if(input$input12=="Blocks with most gas used")
+      {
+        d<- d %>% select(TRACTCE,TOTAL.THERMS,geometry) %>% slice_max(TOTAL.THERMS,prop=0.1) %>% mapview(zcol="TOTAL.THERMS")
+        d
+      }
+      else if(input$input12=="Highest population")
+      {
+        d<- d %>% select(TRACTCE,TOTAL.POPULATION,geometry) %>% slice_max(TOTAL.POPULATION,prop=0.1) %>% mapview(zcol="TOTAL.POPULATION")
+        d
+      }
+      else if(input$input12=="Most occupied percentage")
+      {
+        d<- d %>% select(TRACTCE,OCCUPIED.UNITS.PERCENTAGE,geometry) %>% slice_max(OCCUPIED.UNITS.PERCENTAGE,prop=0.1) %>% mapview(zcol="OCCUPIED.UNITS.PERCENTAGE")
+        d
+      }
+      else if(input$input12=="Highest percentage of renters")
+      {
+        d<- d %>% select(TRACTCE,RENTER.OCCUPIED.HOUSING.PERCENTAGE,geometry) %>% slice_max(RENTER.OCCUPIED.HOUSING.PERCENTAGE,prop=0.1) %>% 
+          mapview(zcol="RENTER.OCCUPIED.HOUSING.PERCENTAGE")
+        d
+      }
+      else if(input$input12=="Greatest Housesize")
+      {
+        d<- d %>% select(TRACTCE,AVERAGE.HOUSESIZE,geometry) %>% slice_max(AVERAGE.HOUSESIZE,prop=0.1) %>% 
+          mapview(zcol="AVERAGE.HOUSESIZE")
+        d
+      }
+      else if(input$input12=="Largest number of units")
+      {
+        d<- d %>% select(TRACTCE,TOTAL.UNITS,geometry) %>% slice_max(TOTAL.UNITS,prop=0.1) %>% 
+          mapview(zcol="TOTAL.UNITS")
+        d
+      }
+    }
+    else{
     d<-subset(d1,d1$COMMUNITY.AREA.NAME==input$input8)
     d<-geo_join (chicagoblks,d,'GEOID10','CENSUS.BLOCK',how="inner")
     d
+    }
   })
   
   option9Reactive<-reactive({
@@ -558,93 +627,99 @@ server <- function(input, output,session) {
   optionmap3Reactive <- reactive({
     
     f<-option9Reactive() #get the correct month/total column values to display
-    s<-option8Reactive() #get the subsetted data for community area
+    s<-option8Reactive() #get the subsetted data for community area or mapview object if Chicago is selected
     
-    if(input$input9=="Electricity")
-    {
+    if(input$input8=="Chicago")
       
-      if(input$input11=="All"){
-        
-        m <- mapview(s, zcol = f) 
-        m
-      }
-      else{
-        m<-filter(s,BUILDING.TYPE==input$input11) %>% mapview(zcol=f)
-        m
-      }
-    }
-    else if(input$input9=="Gas")
     {
-      if(input$input11=="All"){
-        m <- mapview(s, zcol = f)
-        m
-      }
-      else{
-        m<-filter(s,BUILDING.TYPE==input$input11) %>%mapview(zcol=f)
-        m
-        
-      }
-    }
-    else if(input$input9=="Building Type")
-    {
-      if(input$input11=="All"){
-        m <- mapview(s, zcol = "BUILDING.TYPE")
-        m
-      }
-      else{
-        m<-filter(s,BUILDING.TYPE==input$input11) %>%mapview(zcol="BUILDING.TYPE")
-        m
-        
-      }
-      
-    }
-    else if(input$input9=="Building Height")
-    {
-      
-      if(input$input11=="All"){
-        m <- mapview(s, zcol = "AVERAGE.STORIES")
-        m
-      }
-      else{
-        m<-filter(s,BUILDING.TYPE==input$input11) %>%mapview(zcol="AVERAGE.STORIES")
-        m
-        
-      }
-      
-    }
-    else if(input$input9=="Building Age")
-    {
-      if(input$input11=="All"){
-        m <- mapview(s, zcol = "AVERAGE.BUILDING.AGE")
-        m
-      }
-      else{
-        m<-filter(s,BUILDING.TYPE==input$input11) %>%mapview(zcol="AVERAGE.BUILDING.AGE")
-        m
-        
-      }
-      
+      s
     }
     
     else
     {
-      if(input$input9=="All"){
-        m <- mapview(s, zcol = "TOTAL.POPULATION")
-        m
-      }
-      else{
-        m<-filter(s,BUILDING.TYPE==input$input11) %>%mapview(zcol="TOTAL.POPULATION")
-        m
-        
-      }
-    }
-    
+          if(input$input9=="Electricity")
+          {
+            
+            if(input$input11=="All"){
+              
+              m <- mapview(s, zcol = f) 
+              m
+            }
+            else{
+              m<-filter(s,BUILDING.TYPE==input$input11) %>% mapview(zcol=f)
+              m
+            }
+          }
+          else if(input$input9=="Gas")
+          {
+            if(input$input11=="All"){
+              m <- mapview(s, zcol = f)
+              m
+            }
+            else{
+              m<-filter(s,BUILDING.TYPE==input$input11) %>%mapview(zcol=f)
+              m
+              
+            }
+          }
+          else if(input$input9=="Building Type")
+          {
+            if(input$input11=="All"){
+              m <- mapview(s, zcol = "BUILDING.TYPE")
+              m
+            }
+            else{
+              m<-filter(s,BUILDING.TYPE==input$input11) %>%mapview(zcol="BUILDING.TYPE")
+              m
+              
+            }
+            
+          }
+          else if(input$input9=="Building Height")
+          {
+            
+            if(input$input11=="All"){
+              m <- mapview(s, zcol = "AVERAGE.STORIES")
+              m
+            }
+            else{
+              m<-filter(s,BUILDING.TYPE==input$input11) %>%mapview(zcol="AVERAGE.STORIES")
+              m
+              
+            }
+            
+          }
+          else if(input$input9=="Building Age")
+          {
+            if(input$input11=="All"){
+              m <- mapview(s, zcol = "AVERAGE.BUILDING.AGE")
+              m
+            }
+            else{
+              m<-filter(s,BUILDING.TYPE==input$input11) %>%mapview(zcol="AVERAGE.BUILDING.AGE")
+              m
+              
+            }
+            
+          }
+          
+          else
+          {
+            if(input$input9=="All"){
+              m <- mapview(s, zcol = "TOTAL.POPULATION")
+              m
+            }
+            else{
+              m<-filter(s,BUILDING.TYPE==input$input11) %>%mapview(zcol="TOTAL.POPULATION")
+              m
+              
+            }
+          }
+    }#end of chicago else
   })
   
   #Census Tract reactive setup
   option12Reactive<-reactive({
-    
-  ch<-geo_join (chicagoblks,d1,'GEOID10','CENSUS.BLOCK',how="inner")
   
   if(input$input12=="Tallest Buildings"){
     
