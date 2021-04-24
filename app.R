@@ -1,6 +1,7 @@
 
 
 # Project 3 CS 424 Spring 2021 UIC - Rabia Ibtasar
+#FINAL VERSION
 #To deploy 
 #library(rsconnect)
 #rsconnect::deployApp('path/to/your/app')
