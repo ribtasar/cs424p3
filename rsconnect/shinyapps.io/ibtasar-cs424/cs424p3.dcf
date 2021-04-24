@@ -5,9 +5,8 @@ account: ibtasar-cs424
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3988488
-bundleId: 4510550
+bundleId: 4514867
 url: https://ibtasar-cs424.shinyapps.io/cs424p3/
-when: 1619196544.38403
+when: 1619300777.56309
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: Energy_Usage_2010_orgworking.csv
