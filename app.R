@@ -111,7 +111,7 @@ sidebar <-dashboardSidebar (disable = FALSE, collapsed = FALSE,
                             sidebarMenu(
                               menuItem("Near West Side", tabName = "westSide", icon =NULL),
                               menuItem("Community Comparison", tabName = "comparison", icon =icon("dashboard")),
-                              menuItem("City of Chicago", tabName = "chicago", icon =icon("globe")),
+                              #menuItem("City of Chicago", tabName = "chicago", icon =icon("globe")),
                               menuItem("About", tabName = "about", icon = NULL)
                             )
 )
@@ -167,7 +167,7 @@ body<-dashboardBody(
                                 selectInput("input9", "Select option:", selections1, selected=1),
                                 selectInput("input10", "Select the Month:", selections2, selected=1),
                                 selectInput("input11", "Select Building Type:", selections3, selected=1),
-                                checkboxInput("check1", "Select for city of Chicago", value = FALSE, width = NULL),
+                                #checkboxInput("check1", "Select for city of Chicago", value = FALSE, width = NULL),
                                 selectInput("input12", "Select Census Tract option to show:", selections5, selected=NULL)
                                 )
                              ),
@@ -216,7 +216,7 @@ body<-dashboardBody(
                 
                 h5("What is this application for?"),
                 h5(" 
-                      This interactive application has been designed to allow visitors to understand the electricity and gas energy use 
+                      This interactive application has been designed to allow visitors to explore the electricity and gas energy use 
                       in the city of Chicago for 2010 at the block level in different communities and also at the Census tract level 
                       for the entire city. Anyone interested in exploring how electricity and gas usage differs by different
                       variables will find this application useful.
@@ -242,24 +242,7 @@ server <- function(input, output,session) {
   #NWS Tab reactives
   #setup for the first drop down 
   
-  graphReactive <- reactive({
-    if(input$input1=="Electricity")
-    {
-      choice="elec"
-      choice      
-    }
-    else if(input$input1=="Gas")
-    {
-      
-      choice="gas"
-      choice
-    }
-    else{
-      choice="elec"
-      choice
-    }
-    
-  })
+  
 
   option1Reactive <- reactive({
     
@@ -747,9 +730,24 @@ server <- function(input, output,session) {
   option1Reactive()@map
   })
   
+  #create reactive for checking graph values
+  reactiveGT<-reactive({
+    if(input$input1=="Electricity")
+    {
+      l="elec"
+      l
+    }
+    else{
+      
+      l="gas"
+      l
+    }
+    
+  })
   
-  output$graph1<-renderPlot({
-   
+  
+  graphReactive <- reactive({
+    
     elec<-merged_nws[,12:23]
     gas<-merged_nws[,25:36]
     elec$geometry<-NULL
@@ -758,15 +756,42 @@ server <- function(input, output,session) {
     gas<-colSums(gas)
     #create dataframe for graph and tables
     data1<-data.frame(months1,elec,gas)
-    #create datatable to output
+    data1$months1<- as.factor(data1$months1)
+    data1$months1<- factor(data1$months1, levels=c("Jan","Feb","Mar","Apr","May","Jun","July","Aug","Sep","Oct","Nov","Dec"))
     
-    #call a reactive that just looks at first input to see if its elec or gas
-    #and then pass that onto to geom_point
+    if(input$input1=="Electricity")
+    {
+      
+      g<-ggplot(data=data1)+ 
+        geom_point(data=data1,aes(months1,elec))+ geom_path(data=data1,group=1,mapping = aes(x=months1,y=elec)) +
+        theme_bare
+      g
+         
+    }
+    else if(input$input1=="Gas")
+    {
+      
+      g<-ggplot(data=data1)+ 
+        geom_point(data=data1,aes(months1,gas))+ geom_path(data=data1,group=1,mapping = aes(x=months1,y=gas)) +
+        theme_bare
+      g
+    }
+    else{
+      g<-ggplot(data=data1)+ 
+        geom_point(data=data1,aes(months1,elec))+ geom_path(data=data1,group=1,mapping = aes(x=months1,y=elec)) +
+        theme_bare
+      g
+    }
     
-    ggplot(data=data1,aes(x=months1,y=graphReactive()))+ 
-      geom_point(aes(months1,elec))+
-      scale_y_continuous(name=graphReactive())+
-      theme_bare
+  })
+  
+  
+  output$graph1<-renderPlot({
+   
+    s= graphReactive()
+    s
+   
+   
   })
   
   
